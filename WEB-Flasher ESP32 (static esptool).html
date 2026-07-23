@@ -3,49 +3,482 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Gravador Web para ESP32 (USB)</title>
+    <title>Gravador Web para ESP32 (USB) - Premium</title>
+    <!-- Import Google Fonts (Outfit & JetBrains Mono) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        * { box-sizing: border-box; font-family: "Roboto", Helvetica, Arial, sans-serif; }
-        body { background: #333; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px;}
-        .container { background: #F9F9F9; padding: 25px; width: 100%; max-width: 650px; box-shadow: 0 0 20px 0 rgba(0,0,0,0.5); border-radius: 8px; }
-        h3 { text-align: center; color: #333; margin-top: 0; }
-        label { font-weight: bold; font-size: 13px; display: block; margin-bottom: 5px; color: #444; }
-        .form-group { margin-bottom: 15px; }
-        .row { display: flex; gap: 15px; flex-wrap: wrap; }
-        .col { flex: 1; min-width: 150px; }
-        input[type="file"], select, input[type="text"] { width: 100%; padding: 8px; border: 1px solid #ccc; background: #FFF; border-radius: 4px; font-size: 14px;}
-        .checkbox-group { display: flex; align-items: center; gap: 8px; margin-top: 10px; background: #e9ecef; padding: 10px; border-radius: 4px; border: 1px solid #ced4da;}
-        .checkbox-group input { width: auto; cursor: pointer; }
-        .checkbox-group label { margin: 0; cursor: pointer; color: #d9534f; }
-        button { width: 100%; padding: 12px; border: none; background: #0078D7; color: white; font-size: 15px; font-weight: bold; cursor: pointer; border-radius: 4px; transition: background 0.3s; }
-        button:hover:not(:disabled) { background: #005A9E; }
-        button.flash-btn { background: #4CAF50; margin-top: 10px; font-size: 16px; padding: 14px;}
-        button.flash-btn:hover:not(:disabled) { background: #43A047; }
-        button:disabled { background: #cccccc; color: #777; cursor: not-allowed; }
-        #terminal { background: #1e1e1e; color: #4AF626; font-family: "Courier New", Courier, monospace; font-size: 12px; padding: 10px; height: 200px; overflow-y: auto; border-radius: 4px; margin-top: 15px; word-wrap: break-word; }
-        #progressbar_exterior { background-color: #e0e0e0; width: 100%; height: 25px; border-radius: 4px; overflow: hidden; display: none; margin-top: 10px; }
-        #progressbar_interior { background-color: #4CAF50; width: 0%; height: 100%; text-align: center; color: white; line-height: 25px; font-size: 13px; font-weight: bold; transition: width 0.2s; }
-        .status { text-align: center; font-weight: bold; font-size: 14px; margin-top: 5px; padding: 8px; border-radius: 4px;}
-        .warning { background: #fff3cd; color: #856404; padding: 10px; border-radius: 4px; font-size: 13px; margin-bottom: 15px; border: 1px solid #ffeeba; display: none;}
-        hr { border: 0; border-top: 1px solid #ddd; margin: 20px 0; }
+        /* Custom Scrollbar for Terminal and Body */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #111827;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #374151;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #9ca3af;
+        }
+
+        :root {
+            --bg-primary: #0b0f19;
+            --bg-secondary: #111827;
+            --bg-card: #1f2937;
+            --border-color: #374151;
+            --border-glow: rgba(59, 130, 246, 0.2);
+            
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
+            
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --accent-glow: rgba(59, 130, 246, 0.4);
+            
+            --success: #10b981;
+            --success-hover: #059669;
+            --success-glow: rgba(16, 185, 129, 0.3);
+            
+            --danger: #ef4444;
+            --danger-hover: #dc2626;
+            --danger-glow: rgba(239, 68, 68, 0.3);
+            
+            --warning: #f59e0b;
+            --warning-glow: rgba(245, 158, 11, 0.3);
+            
+            --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --font-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', Courier, monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: var(--font-sans);
+        }
+
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 20px var(--border-glow);
+            border-radius: 12px;
+            width: 100%;
+            max-width: 800px;
+            padding: 30px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent), var(--success));
+        }
+
+        h3 {
+            text-align: center;
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 25px;
+            background: linear-gradient(135deg, #fff 30%, var(--text-secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 0.5px;
+        }
+
+        .warning {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--danger);
+            color: #fca5a5;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 20px;
+            display: none;
+            line-height: 1.5;
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.1);
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 8px;
+        }
+
+        label {
+            font-weight: 500;
+            font-size: 13px;
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+        }
+
+        .row {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .col {
+            flex: 1;
+            min-width: 150px;
+        }
+
+        select, input[type="text"], input[type="file"] {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border-radius: 6px;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        select:focus, input[type="text"]:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px var(--border-glow);
+        }
+
+        /* Status & LED Indicator */
+        .status-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 15px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            margin-top: 15px;
+        }
+
+        .status-label {
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .led-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            transition: all 0.3s ease;
+        }
+
+        .status-disconnected {
+            background-color: var(--danger);
+            box-shadow: 0 0 8px var(--danger);
+        }
+
+        .status-connected {
+            background-color: var(--success);
+            box-shadow: 0 0 10px var(--success);
+            animation: ledPulse 1.5s infinite alternate;
+        }
+
+        .status-flashing {
+            background-color: var(--warning);
+            box-shadow: 0 0 12px var(--warning);
+            animation: ledPulseFast 0.5s infinite alternate;
+        }
+
+        @keyframes ledPulse {
+            from { box-shadow: 0 0 4px var(--success); }
+            to { box-shadow: 0 0 12px 3px var(--success); }
+        }
+
+        @keyframes ledPulseFast {
+            from { box-shadow: 0 0 4px var(--warning); }
+            to { box-shadow: 0 0 16px 4px var(--warning); }
+        }
+
+        /* Buttons Styling */
+        button {
+            padding: 10px 16px;
+            border: none;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+        .btn-primary:hover:not(:disabled) {
+            background: var(--accent-hover);
+            box-shadow: 0 0 8px var(--accent-glow);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+        .btn-success:hover:not(:disabled) {
+            background: var(--success-hover);
+            box-shadow: 0 0 8px var(--success-glow);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+        .btn-danger:hover:not(:disabled) {
+            background: var(--danger-hover);
+            box-shadow: 0 0 8px var(--danger-glow);
+        }
+
+        .btn-secondary {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+        .btn-secondary:hover:not(:disabled) {
+            background: #1f2937;
+            border-color: var(--text-secondary);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            box-shadow: none !important;
+        }
+
+        /* File List & Row Styling */
+        .file-list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .file-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .file-row {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            animation: slideDown 0.2s ease-out;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .file-row-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px dashed var(--border-color);
+            padding-bottom: 8px;
+        }
+
+        .file-row-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .file-row-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        @media (max-width: 600px) {
+            .file-row-controls {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .file-info-text {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 6px;
+            background: rgba(255, 255, 255, 0.02);
+            padding: 6px 10px;
+            border-radius: 4px;
+            border-left: 3px solid var(--accent);
+        }
+
+        /* Checkbox Group */
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 15px;
+            background: rgba(245, 158, 11, 0.05);
+            border: 1px dashed var(--warning);
+            padding: 12px;
+            border-radius: 6px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        .checkbox-group label {
+            margin: 0;
+            cursor: pointer;
+            font-size: 12px;
+            color: #fcd34d;
+        }
+
+        /* Progress Bar */
+        #progressbar_exterior {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            width: 100%;
+            height: 25px;
+            border-radius: 6px;
+            overflow: hidden;
+            display: none;
+            margin-top: 15px;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        #progressbar_interior {
+            background: linear-gradient(90deg, var(--accent), var(--success));
+            width: 0%;
+            height: 100%;
+            text-align: center;
+            color: white;
+            line-height: 25px;
+            font-size: 12px;
+            font-weight: 700;
+            transition: width 0.1s ease;
+        }
+
+        /* Terminal card */
+        .terminal-card {
+            background: #070b12;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-top: 20px;
+            overflow: hidden;
+        }
+
+        .terminal-header {
+            background: #111827;
+            border-bottom: 1px solid var(--border-color);
+            padding: 8px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .terminal-title {
+            font-family: var(--font-mono);
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .terminal-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .terminal-btn {
+            padding: 4px 8px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        #terminal {
+            background: #070b12;
+            color: #10b981;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            padding: 15px;
+            height: 200px;
+            overflow-y: auto;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+            line-height: 1.5;
+        }
+
+        hr {
+            border: 0;
+            border-top: 1px solid var(--border-color);
+            margin: 20px 0;
+        }
 
         .copyright {
             text-align: center;
             font-size: 12px;
-            color: #777;
+            color: var(--text-muted);
             margin-top: 25px;
             padding-top: 15px;
-            border-top: 1px dashed #ddd; /* Uma linha discreta separando o flasher do rodapé */
+            border-top: 1px dashed var(--border-color);
             line-height: 1.6;
         }
+
         .copyright a {
-            color: #0078D7;
+            color: var(--accent);
             text-decoration: none;
-            font-weight: bold;
-            transition: color 0.3s ease;
+            font-weight: 600;
+            transition: color 0.2s ease;
         }
+
         .copyright a:hover {
-            color: #005A9E;
+            color: var(--text-primary);
             text-decoration: underline;
         }
     </style>
@@ -59,96 +492,110 @@
         ⚠️ <strong>Atenção:</strong> A Web Serial API requer conexão segura. Hospede esta página com <strong>HTTPS</strong> ou acesse via <strong>localhost</strong>, caso contrário o botão de conectar não funcionará.
     </div>
 
-    <div class="form-group row">
-        <div class="col">
-            <label>Baudrate</label>
-            <select id="selBaudrate">
-                <option value="115200" selected>115200</option>
-                <option value="460800">460800</option>
-                <option value="921600">921600</option>
-            </select>
+    <!-- Seção de Conexão -->
+    <div class="card">
+        <div class="card-title">🔌 Conexão Serial</div>
+        <div class="form-group row">
+            <div class="col">
+                <label>Baudrate de Comunicação</label>
+                <select id="selBaudrate">
+                    <option value="115200" selected>115200</option>
+                    <option value="460800">460800</option>
+                    <option value="921600">921600</option>
+                </select>
+            </div>
+            <div class="col">
+                <label>Origem da Biblioteca (esptool-js)</label>
+                <select id="selLibSource">
+                    <option value="local" selected>Local (Estático - Offline)</option>
+                    <option value="online">Online (CDN unpkg - Fallback)</option>
+                </select>
+            </div>
+            <div class="col" style="display: flex; align-items: flex-end;">
+                <button id="btnConnect" class="btn-primary" style="width: 100%; height: 42px;">Conectar ao ESP32</button>
+            </div>
         </div>
-        <div class="col" style="flex: 1.5; display: flex; align-items: flex-end;">
-            <button id="btnConnect">Conectar ao ESP32</button>
-        </div>
-    </div>
-    <div id="lblStatus" class="status" style="background: #f8d7da; color: #721c24;">Desconectado</div>
-
-    <hr>
-
-    <div class="form-group row">
-        <div class="col">
-            <label>Modo de Flash</label>
-            <select id="selFlashMode">
-                <option value="keep">Keep (Padrão)</option>
-                <option value="dio">DIO</option>
-                <option value="dout">DOUT</option>
-                <option value="qio">QIO</option>
-                <option value="qout">QOUT</option>
-            </select>
-        </div>
-        <div class="col">
-            <label>Frequência</label>
-            <select id="selFlashFreq">
-                <option value="keep">Keep (Padrão)</option>
-                <option value="40m">40 MHz</option>
-                <option value="80m">80 MHz</option>
-            </select>
-        </div>
-        <div class="col">
-            <label>Tamanho</label>
-            <select id="selFlashSize">
-                <option value="keep">Keep (Padrão)</option>
-                <option value="2MB">2MB</option>
-                <option value="4MB">4MB</option>
-                <option value="8MB">8MB</option>
-                <option value="16MB">16MB</option>
-            </select>
+        <div class="status-container">
+            <div class="status-label">
+                <span id="ledStatus" class="led-indicator status-disconnected"></span>
+                <span id="lblStatus">Desconectado</span>
+            </div>
         </div>
     </div>
 
-    <div class="form-group row">
-        <div class="col">
-            <label>Endereço de Gravação (Offset)</label>
-            <select id="selOffset">
-                <option value="0x10000">Firmware Padrão (0x10000)</option>
-                <option value="0x290000">SPIFFS/LittleFS (0x290000)</option>
-                <option value="0x0000">Bootloader / Full (0x0000)</option>
-                <option value="0x8000">Partition Table (0x8000)</option>
-                <option value="custom">Personalizado...</option>
-            </select>
-            <input type="text" id="txtOffset" value="0x10000" style="display:none; margin-top: 8px;" placeholder="Ex: 0x10000">
+    <!-- Configurações de Flash -->
+    <div class="card">
+        <div class="card-title">⚙️ Parâmetros de Hardware</div>
+        <div class="form-group row">
+            <div class="col">
+                <label>Modo de Flash</label>
+                <select id="selFlashMode">
+                    <option value="keep" selected>Keep (Padrão)</option>
+                    <option value="dio">DIO</option>
+                    <option value="dout">DOUT</option>
+                    <option value="qio">QIO</option>
+                    <option value="qout">QOUT</option>
+                </select>
+            </div>
+            <div class="col">
+                <label>Frequência</label>
+                <select id="selFlashFreq">
+                    <option value="keep" selected>Keep (Padrão)</option>
+                    <option value="40m">40 MHz</option>
+                    <option value="80m">80 MHz</option>
+                </select>
+            </div>
+            <div class="col">
+                <label>Tamanho Flash</label>
+                <select id="selFlashSize">
+                    <option value="keep" selected>Keep (Padrão)</option>
+                    <option value="2MB">2MB</option>
+                    <option value="4MB">4MB</option>
+                    <option value="8MB">8MB</option>
+                    <option value="16MB">16MB</option>
+                </select>
+            </div>
         </div>
     </div>
 
-    <div class="form-group">
-        <label>Selecione o Arquivo .bin</label>
-        <input type="file" id="fileInput" accept=".bin" disabled>
-
-        <!-- INÍCIO DAS INFORMAÇÕES DO ARQUIVO -->
-        <div id="fileInfoDisplay" style="display: none; background: #e9ecef; padding: 10px; border-radius: 4px; border: 1px solid #ced4da; margin-top: 10px; font-size: 13px;">
-            <strong style="color: #333;">Informações do Arquivo:</strong><br>
-            <span style="color: #555;">Nome:</span> <strong id="infoName">-</strong><br>
-            <span style="color: #555;">Tamanho:</span> <strong id="infoSize">-</strong><br>
-            <span style="color: #555;">Modificado em:</span> <strong id="infoDate">-</strong>
+    <!-- Gerenciador de Arquivos Dinâmicos -->
+    <div class="card">
+        <div class="file-list-header">
+            <div class="card-title" style="margin-bottom: 0; border: none; padding-bottom: 0;">📁 Arquivos para Gravação</div>
+            <button id="btnAddRow" class="btn-secondary" style="padding: 6px 12px; font-size: 12px;" disabled>+ Adicionar Arquivo</button>
         </div>
-        <!-- FIM DAS INFORMAÇÕES DO ARQUIVO -->
         
+        <div id="fileRowsContainer" class="file-list">
+            <!-- As linhas de arquivo serão inseridas aqui dinamicamente -->
+        </div>
+
         <div class="checkbox-group">
             <input type="checkbox" id="chkEraseAll">
-            <label for="chkEraseAll"><strong>Erase All:</strong> Apagar toda a memória flash antes de gravar (CUIDADO)</label>
+            <label for="chkEraseAll"><strong>Erase All:</strong> Apagar completamente a memória flash antes de gravar (Operação lenta)</label>
         </div>
     </div>
 
-    <button id="btnFlash" class="flash-btn" disabled>🔥 Iniciar Gravação</button>
+    <!-- Ação de Flash -->
+    <button id="btnFlash" class="btn-success" style="width: 100%; font-size: 16px; padding: 14px; margin-top: 10px;" disabled>🔥 Iniciar Gravação</button>
 
+    <!-- Barra de Progresso -->
     <div id="progressbar_exterior">
         <div id="progressbar_interior">0%</div>
     </div>
 
-    <div id="terminal">
-        > Inicializando Web Flasher Avançado...<br>
+    <!-- Terminal de Logs -->
+    <div class="terminal-card">
+        <div class="terminal-header">
+            <span class="terminal-title">CONSOLE LOG</span>
+            <div class="terminal-actions">
+                <button id="btnClearTerminal" class="btn-secondary terminal-btn">Limpar Logs</button>
+                <button id="btnExportLogs" class="btn-secondary terminal-btn">Exportar logs</button>
+            </div>
+        </div>
+        <div id="terminal">> Inicializando Web Flasher Premium...</div>
     </div>
+
+    <!-- Rodapé -->
     <div class="copyright">
         &copy; <span id="year"></span> Todos os direitos reservados.
         <br>
@@ -161,36 +608,33 @@
 <script type="module">
     // Atualiza automaticamente o ano no rodapé
     document.getElementById('year').textContent = new Date().getFullYear();
-    //import { ESPLoader, Transport } from "https://unpkg.com/esptool-js@0.5.4/bundle.js";
-    import { ESPLoader, Transport } from "./esptool-bundle.js";
 
     const btnConnect = document.getElementById('btnConnect');
     const btnFlash = document.getElementById('btnFlash');
-    const fileInput = document.getElementById('fileInput');
-    const selOffset = document.getElementById('selOffset');
-    const txtOffset = document.getElementById('txtOffset');
+    const btnAddRow = document.getElementById('btnAddRow');
+    const fileRowsContainer = document.getElementById('fileRowsContainer');
     const terminal = document.getElementById('terminal');
     const lblStatus = document.getElementById('lblStatus');
+    const ledStatus = document.getElementById('ledStatus');
     const progExt = document.getElementById('progressbar_exterior');
     const progInt = document.getElementById('progressbar_interior');
     
-    // Novos Controles
+    // Controles Globais
     const selBaudrate = document.getElementById('selBaudrate');
+    const selLibSource = document.getElementById('selLibSource');
     const selFlashMode = document.getElementById('selFlashMode');
     const selFlashFreq = document.getElementById('selFlashFreq');
     const selFlashSize = document.getElementById('selFlashSize');
     const chkEraseAll = document.getElementById('chkEraseAll');
     const httpsWarning = document.getElementById('httpsWarning');
 
-    // Novos elementos para exibir info do arquivo
-    const fileInfoDisplay = document.getElementById('fileInfoDisplay');
-    const infoName = document.getElementById('infoName');
-    const infoSize = document.getElementById('infoSize');
-    const infoDate = document.getElementById('infoDate');
-
     let device = null;
     let transport = null;
     let espLoader = null;
+    let rowCounter = 0;
+
+    let ESPLoader = null;
+    let Transport = null;
 
     // Verificar ambiente seguro para a Web Serial API
     if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
@@ -198,53 +642,183 @@
     }
 
     function logMsg(msg) {
-        terminal.innerHTML += msg + "<br>";
+        terminal.innerHTML += "<br>" + msg;
         terminal.scrollTop = terminal.scrollHeight;
     }
 
-    selOffset.addEventListener('change', (e) => {
-        if (e.target.value === 'custom') {
-            txtOffset.style.display = 'block';
-        } else {
-            txtOffset.style.display = 'none';
-            txtOffset.value = e.target.value;
+    // Carregamento dinâmico da biblioteca
+    async function loadEsptoolLibrary() {
+        const source = selLibSource.value;
+        const url = source === 'local' 
+            ? "./esptool-bundle.js" 
+            : "https://unpkg.com/esptool-js@0.5.4/bundle.js";
+
+        logMsg(`> Carregando biblioteca (${source === 'local' ? 'Local Estática' : 'Online via CDN unpkg'})...`);
+        btnConnect.disabled = true;
+        
+        try {
+            const module = await import(url);
+            ESPLoader = module.ESPLoader;
+            Transport = module.Transport;
+            logMsg(`> Biblioteca esptool-js carregada com sucesso de: <strong>${source === 'local' ? 'esptool-bundle.js' : 'CDN unpkg'}</strong>`);
+            btnConnect.disabled = false;
+            
+            if (espLoader) {
+                logMsg("<span style='color:#f59e0b'>> AVISO: A biblioteca mudou. Recomenda-se desconectar e conectar novamente para evitar instabilidades.</span>");
+            }
+        } catch (error) {
+            logMsg(`<span style='color:#ef4444'>> Erro ao carregar a biblioteca: ${error.message}</span>`);
+            logMsg(`> Certifique-se de que o arquivo está sendo executado em um servidor local (localhost/127.0.0.1) ou se há conexão com a internet ativa.`);
         }
+    }
+
+    selLibSource.addEventListener('change', loadEsptoolLibrary);
+
+    // Limpar console
+    document.getElementById('btnClearTerminal').addEventListener('click', () => {
+        terminal.innerHTML = "> Console limpo.";
     });
 
-    fileInput.addEventListener('change', (e) => {
-        if(e.target.files.length > 0) {
-            // Habilita o botão de flash se o ESP já estiver conectado
-            if (espLoader) btnFlash.disabled = false;
-            
-            const file = e.target.files[0];
-            
-            // 1. Nome do Arquivo
-            infoName.textContent = file.name;
-            
-            // 2. Formatar o Tamanho de forma legível (Bytes, KB ou MB)
-            let size = file.size;
-            if (size > 1024 * 1024) {
-                size = (size / (1024 * 1024)).toFixed(2) + ' MB';
-            } else if (size > 1024) {
-                size = (size / 1024).toFixed(2) + ' KB';
-            } else {
-                size = size + ' Bytes';
-            }
-            infoSize.textContent = size;
-            
-            // 3. Formatar a Data de Última Modificação
-            const date = new Date(file.lastModified);
-            infoDate.textContent = date.toLocaleString('pt-BR');
-            
-            // Exibir a caixa de informações
-            fileInfoDisplay.style.display = 'block';
-            
-        } else {
-            // Se o usuário cancelar a seleção, esconde e desabilita
-            btnFlash.disabled = true;
-            fileInfoDisplay.style.display = 'none';
-        }
+    // Exportar logs em arquivo txt
+    document.getElementById('btnExportLogs').addEventListener('click', () => {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = terminal.innerHTML;
+        const textContent = tempDiv.textContent || tempDiv.innerText || "";
+        
+        const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `web-flasher-logs-${new Date().toISOString().slice(0,10)}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
     });
+
+    // Função para adicionar uma nova linha de arquivo
+    function addFileRow() {
+        rowCounter++;
+        const id = `file-row-${rowCounter}`;
+        const rowHTML = `
+            <div class="file-row" id="${id}">
+                <div class="file-row-header">
+                    <span class="file-row-title">Arquivo #${rowCounter}</span>
+                    <button type="button" class="btn-danger btn-remove-row" style="padding: 4px 10px; font-size: 11px;">Remover</button>
+                </div>
+                <div class="file-row-controls">
+                    <div>
+                        <label>Selecionar Arquivo .bin</label>
+                        <input type="file" class="row-file" accept=".bin" ${espLoader ? '' : 'disabled'}>
+                        <div class="file-info-text row-file-info" style="display:none;"></div>
+                    </div>
+                    <div>
+                        <label>Offset de Gravação</label>
+                        <select class="row-offset-select">
+                            <option value="0x10000" selected>Firmware Padrão (0x10000)</option>
+                            <option value="0x1000">Bootloader ESP32 (0x1000)</option>
+                            <option value="0x0">Bootloader / Full (0x0)</option>
+                            <option value="0x8000">Tabela de Partição (0x8000)</option>
+                            <option value="0xe000">Boot App0 (0xe000)</option>
+                            <option value="0x290000">SPIFFS/LittleFS (0x290000)</option>
+                            <option value="custom">Personalizado...</option>
+                        </select>
+                        <input type="text" class="row-offset-custom" placeholder="Ex: 0x10000" style="display:none; margin-top: 8px;">
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = rowHTML.trim();
+        const rowEl = tempDiv.firstChild;
+
+        // Evento de remover a linha
+        rowEl.querySelector('.btn-remove-row').addEventListener('click', () => {
+            rowEl.remove();
+            updateFlashButtonState();
+        });
+
+        // Evento de seleção de arquivo
+        const fileInput = rowEl.querySelector('.row-file');
+        const fileInfo = rowEl.querySelector('.row-file-info');
+        fileInput.addEventListener('change', (e) => {
+            if(e.target.files.length > 0) {
+                const file = e.target.files[0];
+                let size = file.size;
+                if (size > 1024 * 1024) {
+                    size = (size / (1024 * 1024)).toFixed(2) + ' MB';
+                } else if (size > 1024) {
+                    size = (size / 1024).toFixed(2) + ' KB';
+                } else {
+                    size = size + ' Bytes';
+                }
+                const date = new Date(file.lastModified).toLocaleString('pt-BR');
+                fileInfo.innerHTML = `Nome: <strong>${file.name}</strong> | Tam: <strong>${size}</strong> | Mod: <strong>${date}</strong>`;
+                fileInfo.style.display = 'block';
+            } else {
+                fileInfo.style.display = 'none';
+            }
+            updateFlashButtonState();
+        });
+
+        // Evento do Offset Select
+        const offsetSelect = rowEl.querySelector('.row-offset-select');
+        const offsetCustom = rowEl.querySelector('.row-offset-custom');
+        offsetSelect.addEventListener('change', (e) => {
+            if (e.target.value === 'custom') {
+                offsetCustom.style.display = 'block';
+                offsetCustom.value = '';
+            } else {
+                offsetCustom.style.display = 'none';
+                offsetCustom.value = e.target.value;
+            }
+            updateFlashButtonState();
+        });
+
+        offsetCustom.addEventListener('input', () => {
+            updateFlashButtonState();
+        });
+
+        fileRowsContainer.appendChild(rowEl);
+        updateFlashButtonState();
+    }
+
+    // Botão Adicionar Arquivo
+    btnAddRow.addEventListener('click', addFileRow);
+
+    // Atualiza o estado do botão de flash com base nos arquivos selecionados
+    function updateFlashButtonState() {
+        if (!espLoader) {
+            btnFlash.disabled = true;
+            return;
+        }
+
+        const rows = document.querySelectorAll('.file-row');
+        let hasFiles = false;
+        let allValid = true;
+
+        rows.forEach(row => {
+            const fileInput = row.querySelector('.row-file');
+            const offsetSelect = row.querySelector('.row-offset-select');
+            const offsetCustom = row.querySelector('.row-offset-custom');
+
+            if (fileInput.files.length > 0) {
+                hasFiles = true;
+                const offsetStr = offsetSelect.value === 'custom' ? offsetCustom.value : offsetSelect.value;
+                if (!offsetStr || isNaN(parseInt(offsetStr, 16))) {
+                    allValid = false;
+                }
+            } else {
+                allValid = false;
+            }
+        });
+
+        btnFlash.disabled = !(hasFiles && allValid);
+    }
+
+    // Inicializa a primeira linha padrão desabilitada
+    addFileRow();
 
     btnConnect.addEventListener('click', async () => {
         try {
@@ -260,10 +834,13 @@
                 transport = null;
                 
                 btnConnect.innerText = "Conectar ao ESP32";
+                btnConnect.className = "btn-primary";
                 lblStatus.innerText = "Desconectado";
-                lblStatus.style.background = "#f8d7da";
-                lblStatus.style.color = "#721c24";
-                fileInput.disabled = true;
+                ledStatus.className = "led-indicator status-disconnected";
+                
+                // Desabilita upload de arquivos e botão de adicionar
+                document.querySelectorAll('.row-file').forEach(input => input.disabled = true);
+                btnAddRow.disabled = true;
                 btnFlash.disabled = true;
                 logMsg("> Desconectado pelo usuário.");
                 return;
@@ -292,38 +869,66 @@
             logMsg("> Chip detectado: <span style='color: yellow'>" + chip + "</span>");
             
             lblStatus.innerText = `Conectado via USB (${chip})`;
-            lblStatus.style.background = "#d4edda";
-            lblStatus.style.color = "#155724";
+            ledStatus.className = "led-indicator status-connected";
             btnConnect.innerText = "Desconectar";
-            fileInput.disabled = false;
+            btnConnect.className = "btn-danger";
             
-            if(fileInput.files.length > 0) btnFlash.disabled = false;
+            // Habilita campos de arquivos
+            document.querySelectorAll('.row-file').forEach(input => input.disabled = false);
+            btnAddRow.disabled = false;
+            
+            updateFlashButtonState();
 
         } catch (error) {
-            logMsg("<span style='color:red'>> Erro: " + error.message + "</span>");
+            logMsg("<span style='color:#ef4444'>> Erro: " + error.message + "</span>");
+            ledStatus.className = "led-indicator status-disconnected";
         }
     });
 
     btnFlash.addEventListener('click', async () => {
-        if(!fileInput.files.length) return;
+        const rows = document.querySelectorAll('.file-row');
+        if(!rows.length) return;
         
         try {
             btnFlash.disabled = true;
-            fileInput.disabled = true;
+            btnAddRow.disabled = true;
+            document.querySelectorAll('.row-file').forEach(input => input.disabled = true);
+            document.querySelectorAll('.btn-remove-row').forEach(btn => btn.disabled = true);
             btnConnect.disabled = true;
+            selLibSource.disabled = true;
+            
+            ledStatus.className = "led-indicator status-flashing";
             progExt.style.display = 'block';
             progInt.style.width = '0%';
             progInt.innerText = '0%';
             
-            const file = fileInput.files[0];
-            let offsetStr = txtOffset.style.display === 'block' ? txtOffset.value : selOffset.value;
-            const offset = parseInt(offsetStr, 16);
-            const fileData = await new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = (e) => resolve(e.target.result);
-            reader.onerror = () => reject(new Error("Falha ao ler o arquivo .bin"));
-            reader.readAsBinaryString(file);
-            });
+            const fileArray = [];
+            
+            for (let row of rows) {
+                const fileInput = row.querySelector('.row-file');
+                if (fileInput.files.length === 0) continue;
+                
+                const file = fileInput.files[0];
+                const offsetSelect = row.querySelector('.row-offset-select');
+                const offsetCustom = row.querySelector('.row-offset-custom');
+                const offsetStr = offsetSelect.value === 'custom' ? offsetCustom.value : offsetSelect.value;
+                const offset = parseInt(offsetStr, 16);
+                
+                logMsg(`> Lendo arquivo ${file.name}...`);
+                
+                const fileData = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => resolve(new Uint8Array(e.target.result));
+                    reader.onerror = () => reject(new Error(`Falha ao ler o arquivo ${file.name}`));
+                    reader.readAsArrayBuffer(file);
+                });
+                
+                fileArray.push({ data: fileData, address: offset });
+            }
+
+            if (fileArray.length === 0) {
+                throw new Error("Nenhum arquivo válido foi selecionado para gravação.");
+            }
 
             const flashMode = selFlashMode.value;
             const flashFreq = selFlashFreq.value;
@@ -334,38 +939,38 @@
             logMsg(`> Modificadores: Modo=${flashMode}, Freq=${flashFreq}, Tamanho=${flashSize}`);
             
             if (eraseAll) {
-                logMsg("<span style='color:#ff9800'>> ATENÇÃO: Apagando toda a flash primeiro! O processo demorará mais...</span>");
+                logMsg("<span style='color:#f59e0b'>> ATENÇÃO: Apagando toda a flash primeiro! O processo demorará mais...</span>");
             }
             
-            
-            // ... (logo após a verificação do eraseAll)
-            
-            logMsg(`> Gravando Arquivo: ${file.name} (Offset: 0x${offset.toString(16)})`);
+            logMsg(`> Iniciando gravação de ${fileArray.length} arquivo(s)...`);
 
-            // 1. Correção: Uso de 'writeFlash' em camelCase passando um único Objeto
+            const totalBytes = fileArray.reduce((acc, f) => acc + f.data.length, 0);
+            let bytesWrittenByFile = new Array(fileArray.length).fill(0);
+
             await espLoader.writeFlash({
-                fileArray: [{ data: fileData, address: offset }],
+                fileArray: fileArray,
                 flashSize: flashSize,
                 flashMode: flashMode,
                 flashFreq: flashFreq,
                 eraseAll: eraseAll,
                 compress: true,
                 reportProgress: (fileIndex, written, total) => {
-                    let percentage = Math.floor((written / total) * 100);
+                    bytesWrittenByFile[fileIndex] = written;
+                    const currentTotalWritten = bytesWrittenByFile.reduce((acc, val) => acc + val, 0);
+                    const percentage = Math.floor((currentTotalWritten / totalBytes) * 100);
+                    
                     progInt.style.width = percentage + "%";
-                    progInt.innerText = percentage + "%";
+                    progInt.innerText = `Gravando Arquivo ${fileIndex + 1}/${fileArray.length}: ${percentage}%`;
                 }
             });
 
-            logMsg("<span style='color:#4AF626'>> GRAVAÇÃO CONCLUÍDA COM SUCESSO!</span>");
+            logMsg("<span style='color:#10b981'>> GRAVAÇÃO CONCLUÍDA COM SUCESSO!</span>");
             
             logMsg("> Reiniciando o ESP32 (Hard Reset via DTR/RTS)...");
             
-            // 2. Correção: Uso de 'hardReset' em camelCase
             if (typeof espLoader.hardReset === 'function') {
                 await espLoader.hardReset();
             } else {
-                // Manipulação manual correta de EN e BOOT para reset normal
                 await transport.setDTR(false);
                 await transport.setRTS(true);
                 await new Promise(r => setTimeout(r, 100));
@@ -378,13 +983,20 @@
             logMsg("> DISPOSITIVO REINICIADO!");
 
         } catch (error) {
-            logMsg("<span style='color:red'>> Erro na gravação: " + error.message + "</span>");
+            logMsg("<span style='color:#ef4444'>> Erro na gravação: " + error.message + "</span>");
         } finally {
-            btnFlash.disabled = false;
-            fileInput.disabled = false;
+            ledStatus.className = "led-indicator status-connected";
+            btnAddRow.disabled = false;
+            document.querySelectorAll('.row-file').forEach(input => input.disabled = false);
+            document.querySelectorAll('.btn-remove-row').forEach(btn => btn.disabled = false);
             btnConnect.disabled = false;
+            selLibSource.disabled = false;
+            updateFlashButtonState();
         }
     });
+
+    // Carga inicial
+    loadEsptoolLibrary();
 </script>
 </body>
 </html>
