@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Gravador Web para ESP32 (USB)</title>
+    <style>
+        * { box-sizing: border-box; font-family: "Roboto", Helvetica, Arial, sans-serif; }
+        body { background: #333; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px;}
+        .container { background: #F9F9F9; padding: 25px; width: 100%; max-width: 650px; box-shadow: 0 0 20px 0 rgba(0,0,0,0.5); border-radius: 8px; }
+        h3 { text-align: center; color: #333; margin-top: 0; }
+        label { font-weight: bold; font-size: 13px; display: block; margin-bottom: 5px; color: #444; }
+        .form-group { margin-bottom: 15px; }
+        .row { display: flex; gap: 15px; flex-wrap: wrap; }
+        .col { flex: 1; min-width: 150px; }
+        input[type="file"], select, input[type="text"] { width: 100%; padding: 8px; border: 1px solid #ccc; background: #FFF; border-radius: 4px; font-size: 14px;}
+        .checkbox-group { display: flex; align-items: center; gap: 8px; margin-top: 10px; background: #e9ecef; padding: 10px; border-radius: 4px; border: 1px solid #ced4da;}
+        .checkbox-group input { width: auto; cursor: pointer; }
+        .checkbox-group label { margin: 0; cursor: pointer; color: #d9534f; }
+        button { width: 100%; padding: 12px; border: none; background: #0078D7; color: white; font-size: 15px; font-weight: bold; cursor: pointer; border-radius: 4px; transition: background 0.3s; }
+        button:hover:not(:disabled) { background: #005A9E; }
+        button.flash-btn { background: #4CAF50; margin-top: 10px; font-size: 16px; padding: 14px;}
+        button.flash-btn:hover:not(:disabled) { background: #43A047; }
+        button:disabled { background: #cccccc; color: #777; cursor: not-allowed; }
+        #terminal { background: #1e1e1e; color: #4AF626; font-family: "Courier New", Courier, monospace; font-size: 12px; padding: 10px; height: 200px; overflow-y: auto; border-radius: 4px; margin-top: 15px; word-wrap: break-word; }
+        #progressbar_exterior { background-color: #e0e0e0; width: 100%; height: 25px; border-radius: 4px; overflow: hidden; display: none; margin-top: 10px; }
+        #progressbar_interior { background-color: #4CAF50; width: 0%; height: 100%; text-align: center; color: white; line-height: 25px; font-size: 13px; font-weight: bold; transition: width 0.2s; }
+        .status { text-align: center; font-weight: bold; font-size: 14px; margin-top: 5px; padding: 8px; border-radius: 4px;}
+        .warning { background: #fff3cd; color: #856404; padding: 10px; border-radius: 4px; font-size: 13px; margin-bottom: 15px; border: 1px solid #ffeeba; display: none;}
+        hr { border: 0; border-top: 1px solid #ddd; margin: 20px 0; }
+
+        .copyright {
+            text-align: center;
+            font-size: 12px;
+            color: #777;
+            margin-top: 25px;
+            padding-top: 15px;
+            border-top: 1px dashed #ddd; /* Uma linha discreta separando o flasher do rodapé */
+            line-height: 1.6;
+        }
+        .copyright a {
+            color: #0078D7;
+            text-decoration: none;
+            font-weight: bold;
+            transition: color 0.3s ease;
+        }
+        .copyright a:hover {
+            color: #005A9E;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h3>WEB-Flasher ESP32 V1.0</h3>
+    
+    <div id="httpsWarning" class="warning">
+        ⚠️ <strong>Atenção:</strong> A Web Serial API requer conexão segura. Hospede esta página com <strong>HTTPS</strong> ou acesse via <strong>localhost</strong>, caso contrário o botão de conectar não funcionará.
+    </div>
+
+    <div class="form-group row">
+        <div class="col">
+            <label>Baudrate</label>
+            <select id="selBaudrate">
+                <option value="115200" selected>115200</option>
+                <option value="460800">460800</option>
+                <option value="921600">921600</option>
+            </select>
+        </div>
+        <div class="col" style="flex: 1.5; display: flex; align-items: flex-end;">
+            <button id="btnConnect">Conectar ao ESP32</button>
+        </div>
+    </div>
+    <div id="lblStatus" class="status" style="background: #f8d7da; color: #721c24;">Desconectado</div>
+
+    <hr>
+
+    <div class="form-group row">
+        <div class="col">
+            <label>Modo de Flash</label>
+            <select id="selFlashMode">
+                <option value="keep">Keep (Padrão)</option>
+                <option value="dio">DIO</option>
+                <option value="dout">DOUT</option>
+                <option value="qio">QIO</option>
+                <option value="qout">QOUT</option>
+            </select>
+        </div>
+        <div class="col">
+            <label>Frequência</label>
+            <select id="selFlashFreq">
+                <option value="keep">Keep (Padrão)</option>
+                <option value="40m">40 MHz</option>
+                <option value="80m">80 MHz</option>
+            </select>
+        </div>
+        <div class="col">
+            <label>Tamanho</label>
+            <select id="selFlashSize">
+                <option value="keep">Keep (Padrão)</option>
+                <option value="2MB">2MB</option>
+                <option value="4MB">4MB</option>
+                <option value="8MB">8MB</option>
+                <option value="16MB">16MB</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col">
+            <label>Endereço de Gravação (Offset)</label>
+            <select id="selOffset">
+                <option value="0x10000">Firmware Padrão (0x10000)</option>
+                <option value="0x290000">SPIFFS/LittleFS (0x290000)</option>
+                <option value="0x0000">Bootloader / Full (0x0000)</option>
+                <option value="0x8000">Partition Table (0x8000)</option>
+                <option value="custom">Personalizado...</option>
+            </select>
+            <input type="text" id="txtOffset" value="0x10000" style="display:none; margin-top: 8px;" placeholder="Ex: 0x10000">
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label>Selecione o Arquivo .bin</label>
+        <input type="file" id="fileInput" accept=".bin" disabled>
+
+        <!-- INÍCIO DAS INFORMAÇÕES DO ARQUIVO -->
+        <div id="fileInfoDisplay" style="display: none; background: #e9ecef; padding: 10px; border-radius: 4px; border: 1px solid #ced4da; margin-top: 10px; font-size: 13px;">
+            <strong style="color: #333;">Informações do Arquivo:</strong><br>
+            <span style="color: #555;">Nome:</span> <strong id="infoName">-</strong><br>
+            <span style="color: #555;">Tamanho:</span> <strong id="infoSize">-</strong><br>
+            <span style="color: #555;">Modificado em:</span> <strong id="infoDate">-</strong>
+        </div>
+        <!-- FIM DAS INFORMAÇÕES DO ARQUIVO -->
+        
+        <div class="checkbox-group">
+            <input type="checkbox" id="chkEraseAll">
+            <label for="chkEraseAll"><strong>Erase All:</strong> Apagar toda a memória flash antes de gravar (CUIDADO)</label>
+        </div>
+    </div>
+
+    <button id="btnFlash" class="flash-btn" disabled>🔥 Iniciar Gravação</button>
+
+    <div id="progressbar_exterior">
+        <div id="progressbar_interior">0%</div>
+    </div>
+
+    <div id="terminal">
+        > Inicializando Web Flasher Avançado...<br>
+    </div>
+    <div class="copyright">
+        &copy; <span id="year"></span> Todos os direitos reservados.
+        <br>
+        Desenvolvedor: 
+        <a href="https://github.com/devmaiconsilva" target="_blank" rel="noopener noreferrer">Maicon Silva</a> | 
+        <a href="mailto:dev.maiconsilva@gmail.com">dev.maiconsilva@gmail.com</a>
+    </div>
+</div>
+
+<script type="module">
+    // Atualiza automaticamente o ano no rodapé
+    document.getElementById('year').textContent = new Date().getFullYear();
+    //import { ESPLoader, Transport } from "https://unpkg.com/esptool-js@0.5.4/bundle.js";
+    import { ESPLoader, Transport } from "./esptool-bundle.js";
+
+    const btnConnect = document.getElementById('btnConnect');
+    const btnFlash = document.getElementById('btnFlash');
+    const fileInput = document.getElementById('fileInput');
+    const selOffset = document.getElementById('selOffset');
+    const txtOffset = document.getElementById('txtOffset');
+    const terminal = document.getElementById('terminal');
+    const lblStatus = document.getElementById('lblStatus');
+    const progExt = document.getElementById('progressbar_exterior');
+    const progInt = document.getElementById('progressbar_interior');
+    
+    // Novos Controles
+    const selBaudrate = document.getElementById('selBaudrate');
+    const selFlashMode = document.getElementById('selFlashMode');
+    const selFlashFreq = document.getElementById('selFlashFreq');
+    const selFlashSize = document.getElementById('selFlashSize');
+    const chkEraseAll = document.getElementById('chkEraseAll');
+    const httpsWarning = document.getElementById('httpsWarning');
+
+    // Novos elementos para exibir info do arquivo
+    const fileInfoDisplay = document.getElementById('fileInfoDisplay');
+    const infoName = document.getElementById('infoName');
+    const infoSize = document.getElementById('infoSize');
+    const infoDate = document.getElementById('infoDate');
+
+    let device = null;
+    let transport = null;
+    let espLoader = null;
+
+    // Verificar ambiente seguro para a Web Serial API
+    if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        httpsWarning.style.display = 'block';
+    }
+
+    function logMsg(msg) {
+        terminal.innerHTML += msg + "<br>";
+        terminal.scrollTop = terminal.scrollHeight;
+    }
+
+    selOffset.addEventListener('change', (e) => {
+        if (e.target.value === 'custom') {
+            txtOffset.style.display = 'block';
+        } else {
+            txtOffset.style.display = 'none';
+            txtOffset.value = e.target.value;
+        }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+        if(e.target.files.length > 0) {
+            // Habilita o botão de flash se o ESP já estiver conectado
+            if (espLoader) btnFlash.disabled = false;
+            
+            const file = e.target.files[0];
+            
+            // 1. Nome do Arquivo
+            infoName.textContent = file.name;
+            
+            // 2. Formatar o Tamanho de forma legível (Bytes, KB ou MB)
+            let size = file.size;
+            if (size > 1024 * 1024) {
+                size = (size / (1024 * 1024)).toFixed(2) + ' MB';
+            } else if (size > 1024) {
+                size = (size / 1024).toFixed(2) + ' KB';
+            } else {
+                size = size + ' Bytes';
+            }
+            infoSize.textContent = size;
+            
+            // 3. Formatar a Data de Última Modificação
+            const date = new Date(file.lastModified);
+            infoDate.textContent = date.toLocaleString('pt-BR');
+            
+            // Exibir a caixa de informações
+            fileInfoDisplay.style.display = 'block';
+            
+        } else {
+            // Se o usuário cancelar a seleção, esconde e desabilita
+            btnFlash.disabled = true;
+            fileInfoDisplay.style.display = 'none';
+        }
+    });
+
+    btnConnect.addEventListener('click', async () => {
+        try {
+            if (!navigator.serial) {
+                alert("A Web Serial API não é suportada neste navegador ou você não está usando HTTPS.");
+                return;
+            }
+
+            if (espLoader) {
+                await transport.disconnect();
+                espLoader = null;
+                device = null;
+                transport = null;
+                
+                btnConnect.innerText = "Conectar ao ESP32";
+                lblStatus.innerText = "Desconectado";
+                lblStatus.style.background = "#f8d7da";
+                lblStatus.style.color = "#721c24";
+                fileInput.disabled = true;
+                btnFlash.disabled = true;
+                logMsg("> Desconectado pelo usuário.");
+                return;
+            }
+
+            device = await navigator.serial.requestPort();
+            transport = new Transport(device, true);
+            
+            const termLogger = {
+                clean: () => {},
+                writeLine: (data) => { logMsg(data); },
+                write: (data) => { logMsg(data); }
+            };
+
+            const baudrate = parseInt(selBaudrate.value);
+
+            espLoader = new ESPLoader({
+                transport: transport,
+                baudrate: baudrate,
+                terminal: termLogger
+            });
+
+            logMsg(`> Conectando ao ESP32 (Baudrate: ${baudrate})...`);
+            const chip = await espLoader.main();
+            logMsg("> Conectado com sucesso!");
+            logMsg("> Chip detectado: <span style='color: yellow'>" + chip + "</span>");
+            
+            lblStatus.innerText = `Conectado via USB (${chip})`;
+            lblStatus.style.background = "#d4edda";
+            lblStatus.style.color = "#155724";
+            btnConnect.innerText = "Desconectar";
+            fileInput.disabled = false;
+            
+            if(fileInput.files.length > 0) btnFlash.disabled = false;
+
+        } catch (error) {
+            logMsg("<span style='color:red'>> Erro: " + error.message + "</span>");
+        }
+    });
+
+    btnFlash.addEventListener('click', async () => {
+        if(!fileInput.files.length) return;
+        
+        try {
+            btnFlash.disabled = true;
+            fileInput.disabled = true;
+            btnConnect.disabled = true;
+            progExt.style.display = 'block';
+            progInt.style.width = '0%';
+            progInt.innerText = '0%';
+            
+            const file = fileInput.files[0];
+            let offsetStr = txtOffset.style.display === 'block' ? txtOffset.value : selOffset.value;
+            const offset = parseInt(offsetStr, 16);
+            const fileData = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.onerror = () => reject(new Error("Falha ao ler o arquivo .bin"));
+            reader.readAsBinaryString(file);
+            });
+
+            const flashMode = selFlashMode.value;
+            const flashFreq = selFlashFreq.value;
+            const flashSize = selFlashSize.value;
+            const eraseAll = chkEraseAll.checked;
+
+            logMsg(`> Preparando gravação...`);
+            logMsg(`> Modificadores: Modo=${flashMode}, Freq=${flashFreq}, Tamanho=${flashSize}`);
+            
+            if (eraseAll) {
+                logMsg("<span style='color:#ff9800'>> ATENÇÃO: Apagando toda a flash primeiro! O processo demorará mais...</span>");
+            }
+            
+            
+            // ... (logo após a verificação do eraseAll)
+            
+            logMsg(`> Gravando Arquivo: ${file.name} (Offset: 0x${offset.toString(16)})`);
+
+            // 1. Correção: Uso de 'writeFlash' em camelCase passando um único Objeto
+            await espLoader.writeFlash({
+                fileArray: [{ data: fileData, address: offset }],
+                flashSize: flashSize,
+                flashMode: flashMode,
+                flashFreq: flashFreq,
+                eraseAll: eraseAll,
+                compress: true,
+                reportProgress: (fileIndex, written, total) => {
+                    let percentage = Math.floor((written / total) * 100);
+                    progInt.style.width = percentage + "%";
+                    progInt.innerText = percentage + "%";
+                }
+            });
+
+            logMsg("<span style='color:#4AF626'>> GRAVAÇÃO CONCLUÍDA COM SUCESSO!</span>");
+            
+            logMsg("> Reiniciando o ESP32 (Hard Reset via DTR/RTS)...");
+            
+            // 2. Correção: Uso de 'hardReset' em camelCase
+            if (typeof espLoader.hardReset === 'function') {
+                await espLoader.hardReset();
+            } else {
+                // Manipulação manual correta de EN e BOOT para reset normal
+                await transport.setDTR(false);
+                await transport.setRTS(true);
+                await new Promise(r => setTimeout(r, 100));
+                await transport.setDTR(true);
+                await transport.setRTS(false);
+                await new Promise(r => setTimeout(r, 50));
+                await transport.setDTR(false);
+            }
+            
+            logMsg("> DISPOSITIVO REINICIADO!");
+
+        } catch (error) {
+            logMsg("<span style='color:red'>> Erro na gravação: " + error.message + "</span>");
+        } finally {
+            btnFlash.disabled = false;
+            fileInput.disabled = false;
+            btnConnect.disabled = false;
+        }
+    });
+</script>
+</body>
+</html>
