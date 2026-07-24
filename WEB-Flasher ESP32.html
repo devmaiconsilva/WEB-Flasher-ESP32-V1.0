@@ -619,7 +619,7 @@
     const progExt = document.getElementById('progressbar_exterior');
     const progInt = document.getElementById('progressbar_interior');
     
-    // Controles Globais
+   
     const selBaudrate = document.getElementById('selBaudrate');
     const selLibSource = document.getElementById('selLibSource');
     const selFlashMode = document.getElementById('selFlashMode');
@@ -636,7 +636,7 @@
     let ESPLoader = null;
     let Transport = null;
 
-    // Verificar ambiente seguro para a Web Serial API
+   
     if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
         httpsWarning.style.display = 'block';
     }
@@ -646,7 +646,7 @@
         terminal.scrollTop = terminal.scrollHeight;
     }
 
-    // Carregamento dinâmico da biblioteca
+    
     async function loadEsptoolLibrary() {
         const source = selLibSource.value;
         const url = source === 'local' 
@@ -674,12 +674,12 @@
 
     selLibSource.addEventListener('change', loadEsptoolLibrary);
 
-    // Limpar console
+    
     document.getElementById('btnClearTerminal').addEventListener('click', () => {
         terminal.innerHTML = "> Console limpo.";
     });
 
-    // Exportar logs em arquivo txt
+    
     document.getElementById('btnExportLogs').addEventListener('click', () => {
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = terminal.innerHTML;
@@ -696,7 +696,7 @@
         URL.revokeObjectURL(url);
     });
 
-    // Função para adicionar uma nova linha de arquivo
+   
     function addFileRow() {
         rowCounter++;
         const id = `file-row-${rowCounter}`;
@@ -733,13 +733,13 @@
         tempDiv.innerHTML = rowHTML.trim();
         const rowEl = tempDiv.firstChild;
 
-        // Evento de remover a linha
+        
         rowEl.querySelector('.btn-remove-row').addEventListener('click', () => {
             rowEl.remove();
             updateFlashButtonState();
         });
 
-        // Evento de seleção de arquivo
+        
         const fileInput = rowEl.querySelector('.row-file');
         const fileInfo = rowEl.querySelector('.row-file-info');
         fileInput.addEventListener('change', (e) => {
@@ -762,7 +762,7 @@
             updateFlashButtonState();
         });
 
-        // Evento do Offset Select
+        
         const offsetSelect = rowEl.querySelector('.row-offset-select');
         const offsetCustom = rowEl.querySelector('.row-offset-custom');
         offsetSelect.addEventListener('change', (e) => {
@@ -784,10 +784,10 @@
         updateFlashButtonState();
     }
 
-    // Botão Adicionar Arquivo
+    
     btnAddRow.addEventListener('click', addFileRow);
 
-    // Atualiza o estado do botão de flash com base nos arquivos selecionados
+    
     function updateFlashButtonState() {
         if (!espLoader) {
             btnFlash.disabled = true;
@@ -817,7 +817,7 @@
         btnFlash.disabled = !(hasFiles && allValid);
     }
 
-    // Inicializa a primeira linha padrão desabilitada
+    
     addFileRow();
 
     btnConnect.addEventListener('click', async () => {
@@ -838,7 +838,7 @@
                 lblStatus.innerText = "Desconectado";
                 ledStatus.className = "led-indicator status-disconnected";
                 
-                // Desabilita upload de arquivos e botão de adicionar
+                
                 document.querySelectorAll('.row-file').forEach(input => input.disabled = true);
                 btnAddRow.disabled = true;
                 btnFlash.disabled = true;
@@ -873,7 +873,7 @@
             btnConnect.innerText = "Desconectar";
             btnConnect.className = "btn-danger";
             
-            // Habilita campos de arquivos
+         
             document.querySelectorAll('.row-file').forEach(input => input.disabled = false);
             btnAddRow.disabled = false;
             
@@ -917,10 +917,10 @@
                 logMsg(`> Lendo arquivo ${file.name}...`);
                 
                 const fileData = await new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = (e) => resolve(new Uint8Array(e.target.result));
-                    reader.onerror = () => reject(new Error(`Falha ao ler o arquivo ${file.name}`));
-                    reader.readAsArrayBuffer(file);
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = () => reject(new Error(`Falha ao ler o arquivo ${file.name}`));
+                reader.readAsBinaryString(file);
                 });
                 
                 fileArray.push({ data: fileData, address: offset });
@@ -955,14 +955,23 @@
                 eraseAll: eraseAll,
                 compress: true,
                 reportProgress: (fileIndex, written, total) => {
-                    bytesWrittenByFile[fileIndex] = written;
-                    const currentTotalWritten = bytesWrittenByFile.reduce((acc, val) => acc + val, 0);
-                    const percentage = Math.floor((currentTotalWritten / totalBytes) * 100);
-                    
-                    progInt.style.width = percentage + "%";
-                    progInt.innerText = `Gravando Arquivo ${fileIndex + 1}/${fileArray.length}: ${percentage}%`;
+                
+             if (!total || total <= 0) total = fileArray[fileIndex].data.length;
+    
+                bytesWrittenByFile[fileIndex] = written;
+                const currentTotalWritten = bytesWrittenByFile.reduce((acc, val) => acc + val, 0);
+
+                
+                let percentage = Math.floor((currentTotalWritten / totalBytes) * 100);
+                if (percentage > 100) percentage = 100;
+
+                progInt.style.width = percentage + "%";
+                progInt.innerText = `Gravando Arquivo ${fileIndex + 1}/${fileArray.length}: ${percentage}%`;
                 }
             });
+
+            progInt.style.width = "100%";
+            progInt.innerText = "Concluído: 100%";
 
             logMsg("<span style='color:#10b981'>> GRAVAÇÃO CONCLUÍDA COM SUCESSO!</span>");
             
